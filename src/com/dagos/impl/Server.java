@@ -16,7 +16,7 @@ public class Server implements Hello {
     }
 
     public static void main(String args[]) {
-        System.setProperty("java.rmi.server.hostname", "192.168.146.130");
+        System.setProperty("java.rmi.server.hostname", "172.16.45.128");
         try {
             Server obj = new Server();
             Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);
