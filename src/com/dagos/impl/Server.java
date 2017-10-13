@@ -1,28 +1,33 @@
 package com.dagos.impl;
 
+import java.io.File;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Scanner;
 
-import com.dagos.interfaces.Hello;
+import com.dagos.interfaces.MalwareScanner;
+import com.dagos.utils.MalwareDB;
 
-public class Server implements Hello {
+public class Server implements MalwareScanner {
+  private static MalwareDB malwareDB;
   public Server() {
   }
 
-  public String sayHello() {
-    return "Hello, world!";
+  public boolean scanForMalware(String fileName) {
+    return malwareDB.searchForSignature(fileName);
   }
 
   private static void InitializeServer() {
     try {
       Server obj = new Server();
-      Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);
+      MalwareScanner stub = (MalwareScanner) UnicastRemoteObject.exportObject(obj, 0);
 
       // Bind the remote object's stub in the registry
       Registry registry = LocateRegistry.getRegistry();
-      registry.bind("Hello", stub);
+      registry.bind("MalwareScanner", stub);
+
+      /*Setup malware database*/
+      malwareDB = new MalwareDB();
 
       System.err.println("Server ready");
     } catch (Exception e) {
@@ -33,19 +38,37 @@ public class Server implements Hello {
 
   private static void InitializeClient(String[] args) {
     String host = (args.length < 1) ? null : args[0];
-    Scanner scanner = new Scanner(System.in);
-    System.out.println("Send request to remote server?");
-    System.out.println("Enter anything to continue and 'no' to exit");
-    while (!scanner.nextLine().equalsIgnoreCase("no")) {
-      try {
-        Registry registry = LocateRegistry.getRegistry(host);
-        Hello stub = (Hello) registry.lookup("Hello");
-        String response = stub.sayHello();
-        System.out.println("response from " + host + ": " + response);
-      } catch (Exception e) {
-        System.err.println("Client exception: " + e.toString());
-        e.printStackTrace();
+    java.util.Scanner scanner = new java.util.Scanner(System.in);
+    System.out.println("Enter filename to scan. Enter 'exit' to quit");
+    String fileName = scanner.nextLine();
+    while (!fileName.equalsIgnoreCase("exit")) {
+      if (fileName.isEmpty()) {
+        System.out.println("Enter valid file name!");
       }
+      else {
+        System.out.println("Searching for file " + fileName);
+        try {
+          File file = new File(fileName);
+          if (file.exists()) {
+            try {
+              Registry registry = LocateRegistry.getRegistry(host);
+              MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
+              boolean response = stub.scanForMalware(fileName);
+              System.out.println("response from " + host + ": Is " + fileName + " malware? " + response);
+            } catch (Exception e) {
+              System.err.println("Client exception: " + e.toString());
+              e.printStackTrace();
+            }
+          }
+          else {
+            System.out.println("File not found. Enter a valid file name.");
+          }
+        }
+        catch (Exception ex) {
+          System.out.println("File not found. Enter a valid file name.");
+        }
+      }
+      fileName = scanner.nextLine();
     }
   }
 
