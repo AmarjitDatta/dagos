@@ -10,6 +10,7 @@ import com.dagos.utils.MalwareDB;
 
 public class Server implements MalwareScanner {
   private static MalwareDB malwareDB;
+
   public Server() {
   }
 
@@ -44,8 +45,7 @@ public class Server implements MalwareScanner {
     while (!fileName.equalsIgnoreCase("exit")) {
       if (fileName.isEmpty()) {
         System.out.println("Enter valid file name!");
-      }
-      else {
+      } else {
         System.out.println("Searching for file " + fileName);
         try {
           File file = new File(fileName);
@@ -59,12 +59,10 @@ public class Server implements MalwareScanner {
               System.err.println("Client exception: " + e.toString());
               e.printStackTrace();
             }
-          }
-          else {
+          } else {
             System.out.println("File not found. Enter a valid file name.");
           }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
           System.out.println("File not found. Enter a valid file name.");
         }
       }
