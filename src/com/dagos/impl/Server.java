@@ -71,7 +71,7 @@ public class Server implements MalwareScanner {
   }
 
   public static void main(String args[]) {
-    System.setProperty("java.rmi.server.hostname", "172.16.45.128");
+    System.setProperty("java.rmi.server.hostname", "192.168.183.128");
     InitializeServer();
     InitializeClient(args);
   }
