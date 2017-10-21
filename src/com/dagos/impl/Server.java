@@ -5,7 +5,6 @@ import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import com.dagos.interfaces.MalwareScanner;
@@ -14,7 +13,6 @@ import com.dagos.utils.MalwareDB;
 public class Server implements MalwareScanner {
   private static MalwareDB malwareDB;
   private static List<String> hostList = new ArrayList<>();
-  private static HashMap<String , MalwareScanner> stubMap = new HashMap<>();
 
   public Server() {
     hostList.add("dagos-server1");
