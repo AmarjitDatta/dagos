@@ -45,20 +45,6 @@ public class Server implements MalwareScanner {
     }
   }
 
-  private static void InitializeClient() {
-    for (String host : hostList) {
-      try {
-        Registry registry = LocateRegistry.getRegistry(host);
-        MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
-        stubMap.put(host, stub);
-        System.out.println("Connection with " + host + " ready.");
-      } catch (Exception e) {
-        System.err.println("Client exception: " + e.toString());
-        e.printStackTrace();
-      }
-    }
-  }
-
   private static void executeScanning() {
     java.util.Scanner scanner = new java.util.Scanner(System.in);
     System.out.println("Enter filename to scan. Enter 'exit' to quit");
@@ -74,7 +60,8 @@ public class Server implements MalwareScanner {
           if (file.exists()) {
             try {
               for (String host : hostList) {
-                MalwareScanner stub = stubMap.get(host);
+                Registry registry = LocateRegistry.getRegistry(host);
+                MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
                 boolean response = stub.scanForMalware(fileName);
                 System.out.println("Response from " + host + "? Is " + fileName + " malware? " + response);
               }
@@ -102,7 +89,6 @@ public class Server implements MalwareScanner {
     System.setProperty("java.rmi.server.hostname", host);
 
     InitializeServer();
-    InitializeClient();
     executeScanning();
   }
 }
