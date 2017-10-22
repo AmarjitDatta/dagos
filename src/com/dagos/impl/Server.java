@@ -21,46 +21,32 @@ public class Server implements MalwareScanner, ReceiveNewHost {
   private static String localHostIp = "192.168.183.128";
 
   public Server() {
-    tempHostList.add("192.168.183.129");
-    tempHostList.add("192.168.183.130");
   }
 
-  @Override
-  public boolean scanForMalware(String fileName) {
+  public boolean scanForMalware(String fileName) throws RemoteException {
     return malwareDB.searchForSignature(fileName);
   }
 
-  @Override
   public boolean joinNewHost(String host) throws RemoteException {
     return hostManager.createNewConnection(host);
   }
 
   private static void InitializeServer() {
-    /*Interface for welcoming new connection*/
+    tempHostList.add("192.168.183.129");
+    tempHostList.add("192.168.183.130");
+
     try {
-      Server obj = new Server();
-      ReceiveNewHost stub = (ReceiveNewHost) UnicastRemoteObject.exportObject(obj, 0);
+      Server obj1 = new Server();
+      Server obj2= new Server();
+      MalwareScanner stub1 = (MalwareScanner) UnicastRemoteObject.exportObject(obj1, 8080);
+      ReceiveNewHost stub2 = (ReceiveNewHost) UnicastRemoteObject.exportObject(obj2, 8081);
 
       // Bind the remote object's stub in the registry
       Registry registry = LocateRegistry.getRegistry();
-      registry.bind("ReceiveNewHost", stub);
+      registry.bind("MalwareScanner", stub1);
+      registry.bind("ReceiveNewHost", stub2);
 
-      System.err.println("Server ready for accepting new connection.");
-    } catch (Exception e) {
-      System.err.println("Server exception: " + e.toString());
-      e.printStackTrace();
-    }
-
-    /*Interface for malware scanner*/
-    try {
-      Server obj = new Server();
-      MalwareScanner stub = (MalwareScanner) UnicastRemoteObject.exportObject(obj, 0);
-
-      // Bind the remote object's stub in the registry
-      Registry registry = LocateRegistry.getRegistry();
-      registry.bind("MalwareScanner", stub);
-
-      System.err.println("Server ready for malware scanning.");
+      System.err.println("Server ready.");
     } catch (Exception e) {
       System.err.println("Server exception: " + e.toString());
       e.printStackTrace();
@@ -73,9 +59,6 @@ public class Server implements MalwareScanner, ReceiveNewHost {
         Registry registry = LocateRegistry.getRegistry(host);
         ReceiveNewHost stub = (ReceiveNewHost) registry.lookup("ReceiveNewHost");
         boolean response = stub.joinNewHost(localHostIp);
-        if (response) {
-          hostManager.insertNewHost(host);
-        }
       }
     } catch (Exception e) {
       System.err.println("Exception in connecting other hosts: " + e.toString());
