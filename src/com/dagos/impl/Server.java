@@ -1,30 +1,57 @@
 package com.dagos.impl;
 
 import java.io.File;
+import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import com.dagos.interfaces.MalwareScanner;
+import com.dagos.interfaces.ReceiveNewHost;
+import com.dagos.utils.HostManager;
 import com.dagos.utils.MalwareDB;
 
-public class Server implements MalwareScanner {
-  private static MalwareDB malwareDB;
-  private static List<String> hostList = new ArrayList<>();
+public class Server implements MalwareScanner, ReceiveNewHost {
+  private static MalwareDB malwareDB = new MalwareDB();
+  private static HostManager hostManager = new HostManager();
+  private static List<String> tempHostList = new ArrayList<>();
+  private static String localHostIp = "192.168.183.128";
 
   public Server() {
-    hostList.add("dagos-server1");
-    hostList.add("dagos-server2");
-    hostList.add("dagos-server3");
+    tempHostList.add("192.168.183.129");
+    tempHostList.add("192.168.183.130");
   }
 
+  @Override
   public boolean scanForMalware(String fileName) {
     return malwareDB.searchForSignature(fileName);
   }
 
+  @Override
+  public boolean joinNewHost(String host) throws RemoteException {
+    return hostManager.createNewConnection(host);
+  }
+
   private static void InitializeServer() {
+    /*Interface for welcoming new connection*/
+    try {
+      Server obj = new Server();
+      ReceiveNewHost stub = (ReceiveNewHost) UnicastRemoteObject.exportObject(obj, 0);
+
+      // Bind the remote object's stub in the registry
+      Registry registry = LocateRegistry.getRegistry();
+      registry.bind("ReceiveNewHost", stub);
+
+      System.err.println("Server ready for accepting new connection.");
+    } catch (Exception e) {
+      System.err.println("Server exception: " + e.toString());
+      e.printStackTrace();
+    }
+
+    /*Interface for malware scanner*/
     try {
       Server obj = new Server();
       MalwareScanner stub = (MalwareScanner) UnicastRemoteObject.exportObject(obj, 0);
@@ -33,17 +60,30 @@ public class Server implements MalwareScanner {
       Registry registry = LocateRegistry.getRegistry();
       registry.bind("MalwareScanner", stub);
 
-      /*Setup malware database*/
-      malwareDB = new MalwareDB();
-
-      System.err.println("Server ready");
+      System.err.println("Server ready for malware scanning.");
     } catch (Exception e) {
       System.err.println("Server exception: " + e.toString());
       e.printStackTrace();
     }
   }
 
-  private static void executeScanning() {
+  private static void ConnectWithOtherServers() {
+    try {
+      for (String host : tempHostList) {
+        Registry registry = LocateRegistry.getRegistry(host);
+        ReceiveNewHost stub = (ReceiveNewHost) registry.lookup("ReceiveNewHost");
+        boolean response = stub.joinNewHost(localHostIp);
+        if (response) {
+          hostManager.insertNewHost(host);
+        }
+      }
+    } catch (Exception e) {
+      System.err.println("Exception in connecting other hosts: " + e.toString());
+      e.printStackTrace();
+    }
+  }
+
+  private static void ExecuteScanning() {
     java.util.Scanner scanner = new java.util.Scanner(System.in);
     System.out.println("Enter filename to scan. Enter 'exit' to quit");
     String fileName = scanner.nextLine();
@@ -52,16 +92,19 @@ public class Server implements MalwareScanner {
       if (fileName.isEmpty()) {
         System.out.println("Enter valid file name!");
       } else {
-        System.out.println("Searching for file " + fileName);
         try {
           File file = new File(fileName);
           if (file.exists()) {
+            System.out.println("Scanning file " + fileName + " for malware.");
+            boolean localScanResult = malwareDB.searchForSignature(fileName);
+            System.out.println("Local scan result: " + localScanResult);
+
             try {
-              for (String host : hostList) {
+              for (String host : hostManager.getHostList()) {
                 Registry registry = LocateRegistry.getRegistry(host);
                 MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
                 boolean response = stub.scanForMalware(fileName);
-                System.out.println("Response from " + host + "? Is " + fileName + " malware? " + response);
+                System.out.println("Scan result from " + host + ": " + response);
               }
             } catch (Exception e) {
               System.err.println("Client exception: " + e.toString());
@@ -79,14 +122,19 @@ public class Server implements MalwareScanner {
   }
 
   public static void main(String args[]) {
-    String host = (args.length < 1) ? null : args[0];
-    if (host == null || host.isEmpty()) {
-      host = "192.168.183.128";
+    if (args.length == 1) {
+      localHostIp = args[0];
     }
 
-    System.setProperty("java.rmi.server.hostname", host);
+    System.out.println("Local host ip address: " + localHostIp);
+    System.setProperty("java.rmi.server.hostname", localHostIp);
 
     InitializeServer();
-    executeScanning();
+    System.out.println("Press enter to continue");
+    Scanner scanner = new Scanner(System.in);
+    scanner.nextLine();
+
+    ConnectWithOtherServers();
+    ExecuteScanning();
   }
 }
