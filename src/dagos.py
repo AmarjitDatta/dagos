@@ -8,7 +8,7 @@ if len(sys.argv) > 1:				# grab the value of commandline argument
 
 return_value='nf'   #default value nf=not found
 # compile yara rules found in this path
-rule = yara.compile(filepath='yararules/rules.yar')
+rule = yara.compile(filepath='rules.yar')
 # match rules with passed arguments
 matches = rule.match(data=supplied_data)
 
