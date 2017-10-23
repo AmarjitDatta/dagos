@@ -23,8 +23,8 @@ public class Server implements MalwareScanner, ReceiveNewHost {
   public Server() {
   }
 
-  public boolean scanForMalware(String fileName) throws RemoteException {
-    return malwareDB.searchForSignature(fileName);
+  public boolean scanForMalware(String signature) throws RemoteException {
+    return malwareDB.searchForSignature(signature);
   }
 
   public boolean joinNewHost(String host) throws RemoteException {
@@ -37,7 +37,7 @@ public class Server implements MalwareScanner, ReceiveNewHost {
 
     try {
       Server obj1 = new Server();
-      Server obj2= new Server();
+      Server obj2 = new Server();
       MalwareScanner stub1 = (MalwareScanner) UnicastRemoteObject.exportObject(obj1, 8080);
       ReceiveNewHost stub2 = (ReceiveNewHost) UnicastRemoteObject.exportObject(obj2, 8081);
 
@@ -68,39 +68,30 @@ public class Server implements MalwareScanner, ReceiveNewHost {
 
   private static void ExecuteScanning() {
     java.util.Scanner scanner = new java.util.Scanner(System.in);
-    System.out.println("Enter filename to scan. Enter 'exit' to quit");
-    String fileName = scanner.nextLine();
+    System.out.println("Enter signature to scan.");
+    String signature = scanner.nextLine();
 
-    while (!fileName.equalsIgnoreCase("exit")) {
-      if (fileName.isEmpty()) {
-        System.out.println("Enter valid file name!");
+    while (!signature.equalsIgnoreCase("exit")) {
+      if (signature.isEmpty()) {
+        System.out.println("Enter a valid signature!");
       } else {
-        try {
-          File file = new File(fileName);
-          if (file.exists()) {
-            System.out.println("Scanning file " + fileName + " for malware.");
-            boolean localScanResult = malwareDB.searchForSignature(fileName);
-            System.out.println("Local scan result: " + localScanResult);
+        System.out.println("Searching for signature " + signature + " for malware.");
+        boolean localScanResult = malwareDB.searchForSignature(signature);
+        System.out.println("Local scan result: " + localScanResult);
 
-            try {
-              for (String host : hostManager.getHostList()) {
-                Registry registry = LocateRegistry.getRegistry(host);
-                MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
-                boolean response = stub.scanForMalware(fileName);
-                System.out.println("Scan result from " + host + ": " + response);
-              }
-            } catch (Exception e) {
-              System.err.println("Client exception: " + e.toString());
-              e.printStackTrace();
-            }
-          } else {
-            System.out.println("File not found. Enter a valid file name.");
+        try {
+          for (String host : hostManager.getHostList()) {
+            Registry registry = LocateRegistry.getRegistry(host);
+            MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
+            boolean response = stub.scanForMalware(signature);
+            System.out.println("Scan result from " + host + ": " + response);
           }
-        } catch (Exception ex) {
-          System.out.println("File not found. Enter a valid file name.");
+        } catch (Exception e) {
+          System.err.println("Client exception: " + e.toString());
+          e.printStackTrace();
         }
       }
-      fileName = scanner.nextLine();
+      signature = scanner.nextLine();
     }
   }
 
