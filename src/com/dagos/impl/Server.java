@@ -13,6 +13,7 @@ import com.dagos.interfaces.MalwareScanner;
 import com.dagos.interfaces.ReceiveNewHost;
 import com.dagos.utils.HostManager;
 import com.dagos.utils.MalwareDB;
+import com.dagos.utils.ScannerThread;
 
 public class Server implements MalwareScanner, ReceiveNewHost {
   private static MalwareDB malwareDB = new MalwareDB();
@@ -68,29 +69,32 @@ public class Server implements MalwareScanner, ReceiveNewHost {
 
   private static void ExecuteScanning() {
     java.util.Scanner scanner = new java.util.Scanner(System.in);
-    System.out.println("Enter signature to scan.");
+    System.out.print("Enter signature to scan: ");
     String signature = scanner.nextLine();
 
     while (!signature.equalsIgnoreCase("exit")) {
       if (signature.isEmpty()) {
-        System.out.println("Enter a valid signature!");
+        System.out.println("Signature invalid!");
       } else {
+        /*Start time*/
+        long startTime = System.currentTimeMillis();
+
         System.out.println("Searching for signature " + signature + " for malware.");
+
+        for (String host : hostManager.getHostList()) {
+          ScannerThread scannerThread = new ScannerThread(host, signature);
+          scannerThread.run();
+        }
+
         boolean localScanResult = malwareDB.searchForSignature(signature);
         System.out.println("Local scan result: " + localScanResult);
 
-        try {
-          for (String host : hostManager.getHostList()) {
-            Registry registry = LocateRegistry.getRegistry(host);
-            MalwareScanner stub = (MalwareScanner) registry.lookup("MalwareScanner");
-            boolean response = stub.scanForMalware(signature);
-            System.out.println("Scan result from " + host + ": " + response);
-          }
-        } catch (Exception e) {
-          System.err.println("Client exception: " + e.toString());
-          e.printStackTrace();
-        }
+        /*End time*/
+        long stopTime = System.currentTimeMillis();
+        long elapsedTime = stopTime - startTime;
+        System.out.println("Scan execution time: " + (elapsedTime/1000.0) + " sec");
       }
+      System.out.print("Enter signature to scan: ");
       signature = scanner.nextLine();
     }
   }
