@@ -9,4 +9,4 @@ javac com/dagos/utils/*.java
 rmiregistry &
 
 #Run code
-java com.dagos.impl.Server dagos-server1
+java com.dagos.impl.Server
